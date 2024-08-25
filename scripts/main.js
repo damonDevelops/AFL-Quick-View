@@ -5,15 +5,18 @@ import {
   fetchPastGames,
   fetchCurrentRoundData,
   fetchFutureGames,
-  fetchSSE,
+  fetchLiveGames,
+  setupSSEForGame,
 } from "./api.js";
-import { renderLadder, renderGames } from "./rendering.js";
+import { renderLadder, renderGames, updateLiveGamePanel } from "./rendering.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const roundDropdown = document.getElementById("roundDropdown");
   const ladderCacheKey = "aflLadderData";
   const pastGamesCacheKey = "aflPastGamesData";
   const futureGamesCacheKey = "aflFutureGamesData";
+  let sseConnections = {};
+  let updateCounter = 0;
 
   initializeTheme();
 
@@ -56,12 +59,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderGames(gamesData, ladderData, currentRound, liveGames);
     }
 
-    // Set up SSE connection if games data is available
-    if (gamesData) {
-      fetchSSE((newLiveGames) => {
-        console.log("Updating live games data...", newLiveGames);
-        liveGames = newLiveGames;
-        renderGames(gamesData, ladderData, currentRound, liveGames);
+    // Fetch live games and set up SSE for each live game
+    liveGames = await fetchLiveGames();
+    if (liveGames) {
+      renderGames(gamesData, ladderData, currentRound, liveGames); // Render initial live games
+      liveGames.forEach((game) => {
+        const gameId = game.id;
+        sseConnections[gameId] = setupSSEForGame(
+          gameId,
+          (gameId, eventType, eventData) => {
+            console.log(
+              `Received SSE update for game ${gameId}: ${eventType}`,
+              eventData
+            );
+            updateLiveGamePanel(gameId, eventData, eventType);
+          }
+        );
       });
     }
   } catch (error) {
@@ -110,10 +123,33 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (selectedRound === currentRound) {
         gamesData = await fetchCurrentRoundData(currentRound);
         renderGames(gamesData, ladderData, currentRound, liveGames);
+        closeSSEConnections();
+        liveGames.forEach((game) => {
+          const gameId = game.id;
+          sseConnections[gameId] = setupSSEForGame(
+            gameId,
+            (gameId, eventType, eventData) => {
+              console.log(
+                `Received SSE update for game ${gameId}: ${eventType}`,
+                eventData
+              );
+              updateLiveGamePanel(gameId, eventData, eventType);
+            }
+          );
+        });
       } else {
         const cachedGames = pastGamesData.concat(futureGamesData);
         renderGames(cachedGames, ladderData, selectedRound);
+        closeSSEConnections();
       }
+    });
+  }
+
+  function closeSSEConnections() {
+    Object.keys(sseConnections).forEach((gameId) => {
+      console.log(`Closing SSE connection for game ID: ${gameId}...`);
+      sseConnections[gameId].close();
+      delete sseConnections[gameId];
     });
   }
 });

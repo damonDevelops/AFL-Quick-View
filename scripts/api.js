@@ -173,7 +173,50 @@ async function fetchLadderData(ladderCacheKey) {
   return ladderData;
 }
 
-// Export functions
+// Fetch live games
+async function fetchLiveGames() {
+  console.log("Fetching live games data...");
+  try {
+    const response = await fetch(`https://api.squiggle.com.au/?q=games;live=1`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    console.log("Fetched live games data:", data.games);
+    return data.games;
+  } catch (error) {
+    console.error("Failed to fetch live games data:", error);
+    return null;
+  }
+}
+
+// Setup SSE for a specific game ID
+function setupSSEForGame(gameId, onEventCallback) {
+  console.log(`Setting up SSE connection for game ID: ${gameId}`);
+  const eventSource = new EventSource(
+    `https://api.squiggle.com.au/sse/events/${gameId}`
+  );
+
+  eventSource.addEventListener("score", (event) => {
+    const parsedData = JSON.parse(event.data);
+    console.log(`Score event received for game ${gameId}:`, parsedData);
+    onEventCallback(gameId, "score", parsedData);
+  });
+
+  eventSource.addEventListener("timestr", (event) => {
+    const parsedData = JSON.parse(event.data);
+    console.log(`Timestr event received for game ${gameId}:`, parsedData);
+    onEventCallback(gameId, "timestr", parsedData);
+  });
+
+  eventSource.onerror = (error) => {
+    console.error(`SSE error for game ID ${gameId}:`, error);
+    eventSource.close();
+  };
+
+  return eventSource;
+}
+
 export {
   getCurrentRound,
   fetchLadderData,
@@ -181,5 +224,6 @@ export {
   fetchCompletedGamesCurrentRound,
   fetchFutureGames,
   fetchCurrentRoundData,
-  fetchSSE,
+  fetchLiveGames,
+  setupSSEForGame,
 };

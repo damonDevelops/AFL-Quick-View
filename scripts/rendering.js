@@ -23,27 +23,6 @@ function getTeamName(teamId) {
   return teamMapping[teamId] || "Unknown Team";
 }
 
-// Function to get a team's ladder position
-function getTeamLadderPosition(teamName, ladderData) {
-  const team = ladderData.find((team) => team.name === teamName);
-  if (!team) return "-";
-
-  const rank = team.rank;
-  let suffix;
-
-  if (rank % 10 === 1 && rank !== 11) {
-    suffix = "st";
-  } else if (rank % 10 === 2 && rank !== 12) {
-    suffix = "nd";
-  } else if (rank % 10 === 3 && rank !== 13) {
-    suffix = "rd";
-  } else {
-    suffix = "th";
-  }
-
-  return `${rank}${suffix}`;
-}
-
 // Function to render the AFL ladder
 export function renderLadder(ladderData) {
   const output = document.getElementById("output");
@@ -118,8 +97,64 @@ export function renderGames(gamesData, ladderData, round, liveGames = []) {
       renderFutureGame(game);
     }
   });
+
+  // Prevent re-rendering live games if they already exist
+  liveGames.forEach((liveGame) => {
+    const existingGameCard = document.getElementById(
+      `live-game-${liveGame.id}`
+    );
+    if (!existingGameCard) {
+      renderLiveGame(liveGame);
+    }
+  });
 }
 
+// Function to render live games initially and set up for updates
+function renderLiveGame(liveGameData) {
+  const existingGameCard = document.getElementById(
+    `live-game-${liveGameData.id}`
+  );
+
+  // Only render if the game card doesn't already exist
+  if (!existingGameCard) {
+    const output = document.getElementById("output");
+
+    const homeTeamName = getTeamName(liveGameData.hteam);
+    const awayTeamName = getTeamName(liveGameData.ateam);
+    const homeTeamLogo = `images/${homeTeamName.replace(/ /g, "")}.png`;
+    const awayTeamLogo = `images/${awayTeamName.replace(/ /g, "")}.png`;
+    const matchTime = liveGameData.timestr || "Live";
+    const homeScore = liveGameData.hscore || "-";
+    const awayScore = liveGameData.ascore || "-";
+
+    const gameCard = document.createElement("div");
+    gameCard.className = "game-card live"; // Mark as live
+    gameCard.id = `live-game-${liveGameData.id}`; // Assign a unique ID
+
+    gameCard.innerHTML = `
+      <div class="team-container home">
+        <div class="team">
+          <span class="team-name">${homeTeamName}</span>
+          <img src="${homeTeamLogo}" alt="${homeTeamName}" class="team-logo">
+        </div>
+        <div class="score">${homeScore}</div>
+      </div>
+      <div class="live-banner-container">
+        <div class="banner">${matchTime}</div>
+        <div class="sse-venue">${liveGameData.venue}</div>
+      </div>
+      <div class="team-container away">
+        <div class="score">${awayScore}</div>
+        <div class="team">
+          <img src="${awayTeamLogo}" alt="${awayTeamName}" class="team-logo">
+          <span class="team-name">${awayTeamName}</span>
+        </div>
+      </div>
+    `;
+
+    output.appendChild(gameCard);
+  }
+}
 // Function to render completed games
 function renderCompletedGame(game, ladderData) {
   const output = document.getElementById("output");
@@ -210,43 +245,29 @@ function renderFutureGame(game) {
   output.appendChild(gameCard);
 }
 
-// Function to render live games (updated to handle SSE data directly)
-function renderLiveGame(game, liveGameData) {
-  const output = document.getElementById("output");
+// Function to update live game panel with SSE data
+export function updateLiveGamePanel(gameId, eventData, eventType) {
+  const gameCard = document.getElementById(`live-game-${gameId}`);
 
-  const homeTeamName = getTeamName(liveGameData.hteam);
-  const awayTeamName = getTeamName(liveGameData.ateam);
-  const homeTeamLogo = `images/${homeTeamName.replace(/ /g, "")}.png`;
-  const awayTeamLogo = `images/${awayTeamName.replace(/ /g, "")}.png`;
-  const matchTime = liveGameData.timestr || "Live";
-  const homeScore = liveGameData.hscore;
-  const awayScore = liveGameData.ascore;
+  if (!gameCard) {
+    console.error(`Live game card not found for game ID: ${gameId}`);
+    return;
+  }
 
-  const gameCard = document.createElement("div");
-  gameCard.className = "game-card live"; // Mark as live
-
-  gameCard.innerHTML = `
-    <div class="team-container home">
-      <div class="team">
-        <span class="team-name">${homeTeamName}</span>
-        <img src="${homeTeamLogo}" alt="${homeTeamName}" class="team-logo">
-      </div>
-      <div class="score">${homeScore}</div>
-    </div>
-    <div class="live-banner-container">
-      <div class="banner">${matchTime}</div>
-      <div class="sse-venue">${liveGameData.venue}</div>
-    </div>
-    <div class="team-container away">
-      <div class="score">${awayScore}</div>
-      <div class="team">
-        <img src="${awayTeamLogo}" alt="${awayTeamName}" class="team-logo">
-        <span class="team-name">${awayTeamName}</span>
-      </div>
-    </div>
-  `;
-
-  output.appendChild(gameCard);
+  // Update the time string or score based on SSE event type
+  if (eventType === "timestr") {
+    const banner = gameCard.querySelector(".banner");
+    if (banner) banner.textContent = eventData.timestr;
+  } else if (eventType === "score") {
+    const homeScore = gameCard.querySelector(".home .score");
+    const awayScore = gameCard.querySelector(".away .score");
+    if (homeScore && awayScore) {
+      homeScore.textContent = eventData.score.hscore;
+      awayScore.textContent = eventData.score.ascore;
+    }
+    const banner = gameCard.querySelector(".banner");
+    if (banner) banner.textContent = eventData.timestr;
+  }
 }
 
 function formatDate(dateString) {
