@@ -1,13 +1,16 @@
-const cacheDuration = 60 * 60 * 1000; // 1 hour in milliseconds
+const pastGamesCacheDuration = 10 * 30 * 24 * 60 * 60 * 1000; // 10 months in milliseconds
+const futureGamesCacheDuration = 7 * 24 * 60 * 60 * 1000; // 1 week in milliseconds
+export const roundsCacheKey = "aflRoundsData"; // Key for caching round data indefinitely
 
-function getCachedData(key) {
+function getCachedData(key, duration = null) {
   console.log(`Fetching cached data for key: ${key}`);
   const cached = localStorage.getItem(key);
   if (cached) {
     const parsedCache = JSON.parse(cached);
     const now = new Date().getTime();
 
-    if (now - parsedCache.timestamp < cacheDuration) {
+    // Check if cache is still valid
+    if (duration === null || now - parsedCache.timestamp < duration) {
       console.log(`Cache hit for key: ${key}`);
       return parsedCache.data;
     } else {
@@ -31,7 +34,7 @@ function cacheData(data, key) {
 // Fetch past games (completed games)
 async function fetchPastGames(cacheKey) {
   console.log("Fetching past games...");
-  let gamesData = getCachedData(cacheKey);
+  let gamesData = getCachedData(cacheKey, pastGamesCacheDuration);
 
   if (!gamesData) {
     try {
@@ -76,22 +79,31 @@ async function fetchCompletedGamesCurrentRound(currentRound) {
 }
 
 // Fetch future games
-async function fetchFutureGames() {
+async function fetchFutureGames(cacheKey) {
   console.log("Fetching future games data...");
-  try {
-    const response = await fetch(
-      `https://api.squiggle.com.au/?q=games;complete=!100`
-    );
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+  let futureGamesData = getCachedData(cacheKey, futureGamesCacheDuration);
+
+  if (!futureGamesData) {
+    try {
+      const response = await fetch(
+        `https://api.squiggle.com.au/?q=games;complete=!100`
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      futureGamesData = data.games;
+      cacheData(futureGamesData, cacheKey);
+      console.log("Fetched and cached future games data.");
+    } catch (error) {
+      console.error("Failed to fetch future games data:", error);
+      return null;
     }
-    const data = await response.json();
-    console.log("Fetched future games data:", data.games);
-    return data.games;
-  } catch (error) {
-    console.error("Failed to fetch future games data:", error);
-    return null;
+  } else {
+    console.log("Using cached future games data.");
   }
+
+  return futureGamesData;
 }
 
 // Fetch current round (combining completed, live, and future)
@@ -154,23 +166,21 @@ function fetchSSE(onScoreEventCallback) {
   };
 }
 
-async function fetchLadderData(ladderCacheKey) {
-  let ladderData = getCachedData(ladderCacheKey);
-
-  if (!ladderData) {
-    console.log("Fetching fresh ladder data from API...");
+// Fetch ladder data without caching
+async function fetchLadderData() {
+  console.log("Fetching fresh ladder data from API...");
+  try {
     const response = await fetch("https://api.squiggle.com.au/?q=standings");
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
-    ladderData = data.standings;
-    cacheData(ladderData, ladderCacheKey);
-  } else {
-    console.log("Using cached ladder data.");
+    console.log("Fetched fresh ladder data:", data.standings);
+    return data.standings;
+  } catch (error) {
+    console.error("Failed to fetch ladder data:", error);
+    return null;
   }
-
-  return ladderData;
 }
 
 // Fetch live games
@@ -226,4 +236,6 @@ export {
   fetchCurrentRoundData,
   fetchLiveGames,
   setupSSEForGame,
+  getCachedData,
+  cacheData,
 };

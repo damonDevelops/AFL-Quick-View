@@ -37,6 +37,18 @@ h1 {
   height: 24px;
 }
 
+#settings {
+  position: absolute;
+  top: 20px;
+  right: 60px;
+  cursor: pointer;
+}
+
+#settings img {
+  width: 24px;
+  height: 24px;
+}
+
 #roundSelector {
   display: flex;
   justify-content: center;
@@ -199,4 +211,101 @@ h1 {
   --dropdown-border: #555555;
   --card-background: #333333;
   --card-border: #444444;
+}
+
+/* Styling for settings dropdown */
+.settings-container {
+  position: relative;
+  display: inline-block;
+}
+
+.settings-icon {
+  cursor: pointer;
+}
+
+.dropdown-menu {
+  display: none; /* Hidden by default */
+  position: absolute;
+  top: 100%; /* Position below the settings icon */
+  right: 0; /* Align to the right */
+  background-color: var(--dropdown-background); /* Dynamic background color */
+  color: var(--dropdown-text); /* Dynamic text color */
+  min-width: 150px; /* Minimum width */
+  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2); /* Shadow for depth */
+  z-index: 1; /* Ensure it's above other elements */
+  border-radius: 5px; /* Rounded corners */
+  border: 1px solid var(--dropdown-border); /* Dynamic border color */
+  overflow: hidden; /* Hide overflow for rounded corners */
+  font-family: Arial, sans-serif; /* Font style */
+}
+
+.dropdown-menu.show {
+  display: block; /* Show when active */
+}
+
+.dropdown-menu button {
+  background-color: var(--dropdown-background); /* Dynamic background color */
+  color: var(--dropdown-text); /* Dynamic text color */
+  padding: 10px 20px; /* Padding for the button */
+  text-align: left; /* Align text to the left */
+  border: none; /* Remove border */
+  width: 100%; /* Full width button */
+  cursor: pointer; /* Pointer cursor */
+  transition: background-color 0.2s ease; /* Transition for hover effect */
+}
+
+.dropdown-menu button:hover {
+  background-color: var(--card-background); /* Dynamic hover background color */
+}
+
+/* Loading Screen Styles */
+.loading-screen {
+  display: none; /* Hidden by default */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent background */
+  color: white;
+  text-align: center;
+  z-index: 1000; /* Ensure it is above all other content */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  border: 8px solid rgba(255, 255, 255, 0.3); /* Light gray border */
+  border-top: 8px solid white; /* White top border for animation */
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite; /* Spin animation */
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Adjustments for dark and light themes */
+[data-theme="dark"] .loading-screen {
+  background-color: rgba(
+    44,
+    44,
+    44,
+    0.9
+  ); /* Darker background for dark theme */
+  color: #f1f1f1; /* Lighter text color */
+}
+
+[data-theme="dark"] .spinner {
+  border: 8px solid rgba(255, 255, 255, 0.3); /* Adjust spinner border for dark theme */
+  border-top: 8px solid #f1f1f1; /* Adjust spinner color for dark theme */
 }

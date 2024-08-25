@@ -7,6 +7,9 @@ import {
   fetchFutureGames,
   fetchLiveGames,
   setupSSEForGame,
+  getCachedData,
+  roundsCacheKey,
+  cacheData,
 } from "./api.js";
 import { renderLadder, renderGames, updateLiveGamePanel } from "./rendering.js";
 
@@ -15,6 +18,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const ladderCacheKey = "aflLadderData";
   const pastGamesCacheKey = "aflPastGamesData";
   const futureGamesCacheKey = "aflFutureGamesData";
+  const loadingScreen = document.getElementById("loadingScreen");
   let sseConnections = {};
   let updateCounter = 0;
 
@@ -25,7 +29,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentRound = 0;
   let liveGames = [];
 
+  function showLoadingScreen() {
+    loadingScreen.style.display = "flex"; // Show loading screen
+  }
+
+  function hideLoadingScreen() {
+    loadingScreen.style.display = "none"; // Hide loading screen
+  }
+
   try {
+    showLoadingScreen(); // Show loading screen at the start
+
     console.log("Fetching current round data...");
     currentRound = await getCurrentRound();
     if (!currentRound) {
@@ -80,18 +94,28 @@ document.addEventListener("DOMContentLoaded", async () => {
   } catch (error) {
     console.error("Error during initialization:", error);
     document.getElementById("output").textContent = `Error: ${error.message}`;
+  } finally {
+    hideLoadingScreen(); // Hide loading screen after all actions are complete
   }
 
   document.getElementById("viewGames").addEventListener("click", () => {
-    if (gamesData) {
-      renderGames(gamesData, ladderData, currentRound, liveGames);
-    }
+    showLoadingScreen();
+    setTimeout(() => {
+      if (gamesData) {
+        renderGames(gamesData, ladderData, currentRound, liveGames);
+      }
+      hideLoadingScreen();
+    }, 100);
   });
 
   document.getElementById("viewLadder").addEventListener("click", () => {
-    if (ladderData) {
-      renderLadder(ladderData);
-    }
+    showLoadingScreen();
+    setTimeout(() => {
+      if (ladderData) {
+        renderLadder(ladderData);
+      }
+      hideLoadingScreen();
+    }, 100);
   });
 
   function populateRoundDropdown(
@@ -102,14 +126,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   ) {
     console.log("Populating round dropdown...");
 
-    const allGamesData = [...gamesData, ...pastGamesData, ...futureGamesData];
-    const rounds = [...new Set(allGamesData.map((game) => game.round))];
-    rounds.sort((a, b) => a - b);
+    let cachedRounds = getCachedData(roundsCacheKey);
 
-    rounds.forEach((round) => {
+    if (!cachedRounds) {
+      console.log("No cached rounds data, generating new data.");
+      const allGamesData = [...gamesData, ...pastGamesData, ...futureGamesData];
+      const rounds = [...new Set(allGamesData.map((game) => game.round))];
+      rounds.sort((a, b) => a - b);
+
+      // Cache the rounds indefinitely
+      cacheData(rounds, roundsCacheKey);
+      cachedRounds = rounds;
+    } else {
+      console.log("Using cached rounds data for dropdown.");
+    }
+
+    cachedRounds.forEach((round) => {
       const option = document.createElement("option");
       const roundName =
-        allGamesData.find((game) => game.round === round).roundname ||
+        gamesData.find((game) => game.round === round)?.roundname ||
         `Round ${round}`;
       option.value = round;
       option.textContent = roundName;
@@ -119,6 +154,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     roundDropdown.value = currentRound;
 
     roundDropdown.addEventListener("change", async () => {
+      showLoadingScreen();
       const selectedRound = parseInt(roundDropdown.value, 10);
       if (selectedRound === currentRound) {
         gamesData = await fetchCurrentRoundData(currentRound);
@@ -142,6 +178,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         renderGames(cachedGames, ladderData, selectedRound);
         closeSSEConnections();
       }
+      hideLoadingScreen();
     });
   }
 
