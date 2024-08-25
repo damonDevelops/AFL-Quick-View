@@ -1,29 +1,19 @@
-// TODO: use this api: https://api.squiggle.com.au/?q=games;year=2024;complete=100;
-//to get all previous games. Cache these with an expiry of ~ a month
-
-// populate the dropdown with these options
-
-// append the remaining by fetching the current round
-
-// implement the sse so it shows live games
-
-// don't cache the future games for now, we'll do that last
-
 import { initializeTheme } from "./theme.js";
 import {
   getCurrentRound,
   fetchLadderData,
-  fetchGameData,
+  fetchPastGames,
+  fetchCurrentRoundData,
+  fetchFutureGames,
   fetchSSE,
 } from "./api.js";
-import { renderLadder, renderGames, renderSSE } from "./rendering.js";
+import { renderLadder, renderGames } from "./rendering.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const roundDropdown = document.getElementById("roundDropdown");
   const ladderCacheKey = "aflLadderData";
-  const currentRoundCacheKey = "aflCurrentRoundData";
-  const previousRoundCacheKey = "aflPreviousRoundData";
-  const futureRoundCacheKey = "aflFutureRoundData";
+  const pastGamesCacheKey = "aflPastGamesData";
+  const futureGamesCacheKey = "aflFutureGamesData";
 
   initializeTheme();
 
@@ -49,33 +39,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       console.log("Ladder data loaded:", ladderData);
     }
 
-    // Fetch and cache previous and future rounds but not the current round
-    const previousRound = currentRound - 1;
-    const nextRound = currentRound + 1;
-
-    const previousGamesData = await fetchGameData(
-      previousRoundCacheKey,
-      previousRound,
-      currentRound
-    );
-    const futureGamesData = await fetchGameData(
-      futureRoundCacheKey,
-      nextRound,
-      currentRound
-    );
+    // Fetch past games data
+    const pastGamesData = await fetchPastGames(pastGamesCacheKey);
+    const futureGamesData = await fetchFutureGames(futureGamesCacheKey);
 
     // Fetch and render current round data separately (no caching)
-    gamesData = await fetchGameData(
-      currentRoundCacheKey,
-      currentRound,
-      currentRound
-    );
+    gamesData = await fetchCurrentRoundData(currentRound);
 
     if (gamesData) {
       populateRoundDropdown(
         currentRound,
         gamesData,
-        previousGamesData,
+        pastGamesData,
         futureGamesData
       );
       renderGames(gamesData, ladderData, currentRound, liveGames);
@@ -86,7 +61,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       fetchSSE((newLiveGames) => {
         console.log("Updating live games data...", newLiveGames);
         liveGames = newLiveGames;
-        updateLiveGames(gamesData, liveGames);
         renderGames(gamesData, ladderData, currentRound, liveGames);
       });
     }
@@ -110,16 +84,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   function populateRoundDropdown(
     currentRound,
     gamesData,
-    previousGamesData,
+    pastGamesData,
     futureGamesData
   ) {
     console.log("Populating round dropdown...");
 
-    const allGamesData = [
-      ...gamesData,
-      ...previousGamesData,
-      ...futureGamesData,
-    ];
+    const allGamesData = [...gamesData, ...pastGamesData, ...futureGamesData];
     const rounds = [...new Set(allGamesData.map((game) => game.round))];
     rounds.sort((a, b) => a - b);
 
@@ -135,20 +105,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     roundDropdown.value = currentRound;
 
-    roundDropdown.addEventListener("change", () => {
-      currentRound = parseInt(roundDropdown.value, 10);
-      renderGames(gamesData, ladderData, currentRound, liveGames);
-    });
-  }
-
-  function updateLiveGames(allGames, liveGames) {
-    console.log("Merging live games data with existing data...");
-    liveGames.forEach((liveGame) => {
-      const gameIndex = allGames.findIndex((game) => game.id === liveGame.id);
-      if (gameIndex !== -1) {
-        allGames[gameIndex] = liveGame; // Update the game data with live data
+    roundDropdown.addEventListener("change", async () => {
+      const selectedRound = parseInt(roundDropdown.value, 10);
+      if (selectedRound === currentRound) {
+        gamesData = await fetchCurrentRoundData(currentRound);
+        renderGames(gamesData, ladderData, currentRound, liveGames);
       } else {
-        allGames.push(liveGame); // Add new live game if it doesn't exist
+        const cachedGames = pastGamesData.concat(futureGamesData);
+        renderGames(cachedGames, ladderData, selectedRound);
       }
     });
   }

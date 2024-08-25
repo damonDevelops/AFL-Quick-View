@@ -94,141 +94,159 @@ export function renderLadder(ladderData) {
   output.appendChild(ladderTable);
 }
 
-// Function to render games (completed, future, and live)
+// Function to render games (entry point)
 export function renderGames(gamesData, ladderData, round, liveGames = []) {
   const output = document.getElementById("output");
   output.innerHTML = "";
 
-  const filteredGames = gamesData.filter((game) => game.round === round);
+  // Filter games for the selected round
+  const filteredGames = gamesData.filter((game) => game.round === round) || [];
 
-  if (filteredGames.length === 0) {
+  if (filteredGames.length === 0 && round !== 0) {
     output.textContent = "No games available for this round.";
     return;
   }
 
-  // Create a map of live games by ID for easy access
   const liveGamesMap = new Map(liveGames.map((game) => [game.id, game]));
 
   filteredGames.forEach((game) => {
-    let isLive = false;
-    let homeTeamName,
-      awayTeamName,
-      homeTeamLogo,
-      awayTeamLogo,
-      matchTime,
-      homeScore,
-      awayScore;
-
     if (liveGamesMap.has(game.id)) {
-      // Handle live games separately
-      isLive = true;
-      const liveGame = liveGamesMap.get(game.id); // Get the live game data
-
-      homeTeamName = getTeamName(liveGame.hteam);
-      awayTeamName = getTeamName(liveGame.ateam);
-      homeTeamLogo = `images/${homeTeamName.replace(/ /g, "")}.png`;
-      awayTeamLogo = `images/${awayTeamName.replace(/ /g, "")}.png`;
-      matchTime = liveGame.timestr || "Live";
-      homeScore = liveGame.hscore;
-      awayScore = liveGame.ascore;
+      renderLiveGame(game, liveGamesMap.get(game.id));
+    } else if (game.complete === 100) {
+      renderCompletedGame(game, ladderData);
     } else {
-      // Handle completed and future games using data from the API
-      homeTeamName = game.hteam;
-      awayTeamName = game.ateam;
-      homeTeamLogo = `images/${homeTeamName.replace(/ /g, "")}.png`;
-      awayTeamLogo = `images/${awayTeamName.replace(/ /g, "")}.png`;
-      matchTime =
-        game.complete === 100 ? game.timestr : formatTime(game.localtime);
-      homeScore =
-        game.complete === 100
-          ? game.hscore
-          : getTeamLadderPosition(game.hteam, ladderData);
-      awayScore =
-        game.complete === 100
-          ? game.ascore
-          : getTeamLadderPosition(game.ateam, ladderData);
+      renderFutureGame(game);
     }
-
-    const gameDate = formatDate(game.date);
-
-    const dateElement = document.createElement("div");
-    dateElement.className = "game-date";
-    dateElement.textContent = gameDate;
-
-    const gameCard = document.createElement("div");
-    gameCard.className = `game-card ${isLive ? "live" : ""}`;
-
-    gameCard.innerHTML = `
-      ${isLive ? `<div class="banner">${matchTime}</div>` : ""}
-      <div class="team-container home">
-        <div class="team">
-          <span class="team-name">${homeTeamName}</span>
-          <img src="${homeTeamLogo}" alt="${homeTeamName}" class="team-logo">
-        </div>
-        <div class="score">${homeScore}</div>
-      </div>
-      <div class="match-info">
-        <div>${matchTime}</div>
-        <div>${game.venue}</div>
-      </div>
-      <div class="team-container away">
-        <div class="score">${awayScore}</div>
-        <div class="team">
-          <img src="${awayTeamLogo}" alt="${awayTeamName}" class="team-logo">
-          <span class="team-name">${awayTeamName}</span>
-        </div>
-      </div>
-    `;
-
-    output.appendChild(dateElement);
-    output.appendChild(gameCard);
   });
 }
 
-// Function to render SSE updates
-export function renderSSE(liveGames) {
+// Function to render completed games
+function renderCompletedGame(game, ladderData) {
   const output = document.getElementById("output");
 
-  // Clear previous live game data but retain non-live data
-  const existingNonLiveGames = output.querySelectorAll(".game-card:not(.live)");
-  output.innerHTML = ""; // Clear all content
-  existingNonLiveGames.forEach((node) => output.appendChild(node)); // Re-add non-live data
+  const homeTeamName = game.hteam;
+  const awayTeamName = game.ateam;
+  const homeTeamLogo = `images/${homeTeamName.replace(/ /g, "")}.png`;
+  const awayTeamLogo = `images/${awayTeamName.replace(/ /g, "")}.png`;
+  const matchTime = game.timestr;
+  const homeScore = game.hscore;
+  const awayScore = game.ascore;
 
-  liveGames.forEach((game) => {
-    // For live games, use ID-to-name mapping
-    const homeTeamName = getTeamName(game.hteam);
-    const awayTeamName = getTeamName(game.ateam);
-    const homeTeamLogo = `images/${homeTeamName.replace(/ /g, "")}.png`;
-    const awayTeamLogo = `images/${awayTeamName.replace(/ /g, "")}.png`;
-    const matchTime = game.timestr || "Live";
+  const gameDate = formatDate(game.date);
 
-    // Create elements for the live game
-    const gameCard = document.createElement("div");
-    gameCard.className = "game-card live"; // Mark as live
+  const dateElement = document.createElement("div");
+  dateElement.className = "game-date";
+  dateElement.textContent = gameDate;
 
-    gameCard.innerHTML = `
-      <div class="team-container home">
-        <div class="team">
-          <span class="team-name">${homeTeamName}</span>
-          <img src="${homeTeamLogo}" alt="${homeTeamName}" class="team-logo">
-        </div>
-        <div class="score">${game.hscore}</div>
+  const gameCard = document.createElement("div");
+  gameCard.className = "game-card";
+
+  gameCard.innerHTML = `
+    <div class="team-container home">
+      <div class="team">
+        <span class="team-name">${homeTeamName}</span>
+        <img src="${homeTeamLogo}" alt="${homeTeamName}" class="team-logo">
       </div>
-      <div class="live-banner-container">
-        <div class="banner">${matchTime}</div>
-        <div class="sse-venue">${game.venue}</div>
+      <div class="score">${homeScore}</div>
+    </div>
+    <div class="match-info">
+      <div>${matchTime}</div>
+      <div>${game.venue}</div>
+    </div>
+    <div class="team-container away">
+      <div class="score">${awayScore}</div>
+      <div class="team">
+        <img src="${awayTeamLogo}" alt="${awayTeamName}" class="team-logo">
+        <span class="team-name">${awayTeamName}</span>
       </div>
-      <div class="team-container away">
-        <div class="score">${game.ascore}</div>
-        <div class="team">
-          <img src="${awayTeamLogo}" alt="${awayTeamName}" class="team-logo">
-          <span class="team-name">${awayTeamName}</span>
-        </div>
-      </div>
-    `;
+    </div>
+  `;
 
-    output.appendChild(gameCard);
-  });
+  output.appendChild(dateElement);
+  output.appendChild(gameCard);
+}
+
+// Function to render future games
+function renderFutureGame(game) {
+  const output = document.getElementById("output");
+
+  const homeTeamName = game.hteam;
+  const awayTeamName = game.ateam;
+  const homeTeamLogo = `images/${homeTeamName.replace(/ /g, "")}.png`;
+  const awayTeamLogo = `images/${awayTeamName.replace(/ /g, "")}.png`;
+  const matchTime = formatTime(game.localtime);
+
+  const gameDate = formatDate(game.date);
+
+  const dateElement = document.createElement("div");
+  dateElement.className = "game-date";
+  dateElement.textContent = gameDate;
+
+  const gameCard = document.createElement("div");
+  gameCard.className = "game-card";
+
+  gameCard.innerHTML = `
+    <div class="team-container home">
+      <div class="team">
+        <span class="team-name">${homeTeamName}</span>
+        <img src="${homeTeamLogo}" alt="${homeTeamName}" class="team-logo">
+      </div>
+      <div class="score">-</div>
+    </div>
+    <div class="match-info">
+      <div>${matchTime}</div>
+      <div>${game.venue}</div>
+    </div>
+    <div class="team-container away">
+      <div class="score">-</div>
+      <div class="team">
+        <img src="${awayTeamLogo}" alt="${awayTeamName}" class="team-logo">
+        <span class="team-name">${awayTeamName}</span>
+      </div>
+    </div>
+  `;
+
+  output.appendChild(dateElement);
+  output.appendChild(gameCard);
+}
+
+// Function to render live games (updated to handle SSE data directly)
+function renderLiveGame(game, liveGameData) {
+  const output = document.getElementById("output");
+
+  const homeTeamName = getTeamName(liveGameData.hteam);
+  const awayTeamName = getTeamName(liveGameData.ateam);
+  const homeTeamLogo = `images/${homeTeamName.replace(/ /g, "")}.png`;
+  const awayTeamLogo = `images/${awayTeamName.replace(/ /g, "")}.png`;
+  const matchTime = liveGameData.timestr || "Live";
+  const homeScore = liveGameData.hscore;
+  const awayScore = liveGameData.ascore;
+
+  const gameCard = document.createElement("div");
+  gameCard.className = "game-card live"; // Mark as live
+
+  gameCard.innerHTML = `
+    <div class="team-container home">
+      <div class="team">
+        <span class="team-name">${homeTeamName}</span>
+        <img src="${homeTeamLogo}" alt="${homeTeamName}" class="team-logo">
+      </div>
+      <div class="score">${homeScore}</div>
+    </div>
+    <div class="live-banner-container">
+      <div class="banner">${matchTime}</div>
+      <div class="sse-venue">${liveGameData.venue}</div>
+    </div>
+    <div class="team-container away">
+      <div class="score">${awayScore}</div>
+      <div class="team">
+        <img src="${awayTeamLogo}" alt="${awayTeamName}" class="team-logo">
+        <span class="team-name">${awayTeamName}</span>
+      </div>
+    </div>
+  `;
+
+  output.appendChild(gameCard);
 }
 
 function formatDate(dateString) {
