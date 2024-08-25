@@ -7,20 +7,32 @@
   <link rel="stylesheet" href="styles/popup.css">
 </head>
 <body>
+  <div id="loadingScreen" class="loading-screen">
+    <div class="spinner"></div>
+    <p>Loading, please wait...</p>
+  </div>
   <div id="themeSwitcher">
     <img id="sunIcon" src="images/sun.svg" alt="Light mode" />
     <img id="moonIcon" src="images/moon.svg" alt="Dark mode" style="display: none;" />
+  </div>
+  <div id="settings" class="settings-container">
+    <img id="settingsIcon" src="images/settings.svg" alt="Settings" class="settings-icon" />
+    <div id="settingsDropdown" class="dropdown-menu">
+      <button id="repairExtensionButton">Repair Extension</button>
+      <button id="contactMeButton"><a href="mailto:damon.oneil2.newsletter@gmail.com" style="color: inherit; text-decoration: none;">Contact Me</a></button>
+    </div>
   </div>
   <div id="content">
     <h1>AFL Quick View</h1>
     <div id="roundSelector">
       <button id="viewGames">View Games</button>
       <button id="viewLadder">View Ladder</button>
-      <button id="sseTest">SSE Test</button>
       <select id="roundDropdown"></select>
     </div>
     <div id="output"></div>
   </div>
   <script src="scripts/main.js" type="module"></script>
+  <script src="scripts/theme.js" type="module"></script>
+  <script src="scripts/settings.js" type="module"></script>
 </body>
 </html>
