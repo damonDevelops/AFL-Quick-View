@@ -243,7 +243,8 @@ h1 {
   display: block; /* Show when active */
 }
 
-.dropdown-menu button {
+.dropdown-menu button,
+.dropdown-menu a {
   background-color: var(--dropdown-background); /* Dynamic background color */
   color: var(--dropdown-text); /* Dynamic text color */
   padding: 10px 20px; /* Padding for the button */
@@ -251,10 +252,13 @@ h1 {
   border: none; /* Remove border */
   width: 100%; /* Full width button */
   cursor: pointer; /* Pointer cursor */
+  display: block; /* Ensures full clickable area */
+  text-decoration: none; /* Remove underline for links */
   transition: background-color 0.2s ease; /* Transition for hover effect */
 }
 
-.dropdown-menu button:hover {
+.dropdown-menu button:hover,
+.dropdown-menu a:hover {
   background-color: var(--card-background); /* Dynamic hover background color */
 }
 

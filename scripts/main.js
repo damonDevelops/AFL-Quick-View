@@ -37,31 +37,43 @@ document.addEventListener("DOMContentLoaded", async () => {
     loadingScreen.style.display = "none"; // Hide loading screen
   }
 
+  // Function to add timeout to any fetch request
+  async function fetchWithTimeout(fetchPromise, timeout = 15000) {
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Request timed out")), timeout)
+    );
+    return Promise.race([fetchPromise, timeoutPromise]);
+  }
+
   try {
     showLoadingScreen(); // Show loading screen at the start
 
     console.log("Fetching current round data...");
-    currentRound = await getCurrentRound();
+    currentRound = await fetchWithTimeout(getCurrentRound());
     if (!currentRound) {
       throw new Error("Failed to get current round.");
     }
 
     console.log("Fetching ladder and game data...");
 
-    ladderData = await fetchLadderData(ladderCacheKey);
+    ladderData = await fetchWithTimeout(fetchLadderData(ladderCacheKey));
     if (!ladderData) {
       document.getElementById("output").innerHTML +=
-        "<p>Error: Unable to fetch ladder data.</p>";
+        "<p>Error: Unable to fetch ladder data. Please try again later.</p>";
     } else {
       console.log("Ladder data loaded:", ladderData);
     }
 
     // Fetch past games data
-    const pastGamesData = await fetchPastGames(pastGamesCacheKey);
-    const futureGamesData = await fetchFutureGames(futureGamesCacheKey);
+    const pastGamesData = await fetchWithTimeout(
+      fetchPastGames(pastGamesCacheKey)
+    );
+    const futureGamesData = await fetchWithTimeout(
+      fetchFutureGames(futureGamesCacheKey)
+    );
 
     // Fetch and render current round data separately (no caching)
-    gamesData = await fetchCurrentRoundData(currentRound);
+    gamesData = await fetchWithTimeout(fetchCurrentRoundData(currentRound));
 
     if (gamesData) {
       populateRoundDropdown(
@@ -74,7 +86,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // Fetch live games and set up SSE for each live game
-    liveGames = await fetchLiveGames();
+    liveGames = await fetchWithTimeout(fetchLiveGames());
     if (liveGames) {
       renderGames(gamesData, ladderData, currentRound, liveGames); // Render initial live games
       liveGames.forEach((game) => {
@@ -93,7 +105,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   } catch (error) {
     console.error("Error during initialization:", error);
-    document.getElementById("output").textContent = `Error: ${error.message}`;
+    document.getElementById(
+      "output"
+    ).textContent = `Error: ${error.message}. Please try again later.`;
   } finally {
     hideLoadingScreen(); // Hide loading screen after all actions are complete
   }
@@ -157,7 +171,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       showLoadingScreen();
       const selectedRound = parseInt(roundDropdown.value, 10);
       if (selectedRound === currentRound) {
-        gamesData = await fetchCurrentRoundData(currentRound);
+        try {
+          gamesData = await fetchWithTimeout(
+            fetchCurrentRoundData(currentRound)
+          );
+        } catch (error) {
+          console.error("Error fetching current round data:", error);
+          alert("Unable to fetch current round data. Please try again later.");
+        }
         renderGames(gamesData, ladderData, currentRound, liveGames);
         closeSSEConnections();
         liveGames.forEach((game) => {
