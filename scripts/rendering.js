@@ -109,23 +109,39 @@ export function renderGames(gamesData, ladderData, round, liveGames = []) {
   });
 }
 
-// Function to render live games initially and set up for updates
 function renderLiveGame(liveGameData) {
+  console.log("Rendering live game data:", liveGameData);
+
   const existingGameCard = document.getElementById(
     `live-game-${liveGameData.id}`
   );
 
   // Only render if the game card doesn't already exist
   if (!existingGameCard) {
+    console.log("Game card does not exist, creating a new one.");
+
     const output = document.getElementById("output");
 
-    const homeTeamName = getTeamName(liveGameData.hteam);
-    const awayTeamName = getTeamName(liveGameData.ateam);
+    // Assuming getTeamName should handle string input directly
+    const homeTeamName = liveGameData.hteam; // directly using team names from API response
+    const awayTeamName = liveGameData.ateam;
+    console.log("Home Team Name:", homeTeamName);
+    console.log("Away Team Name:", awayTeamName);
+
     const homeTeamLogo = `images/${homeTeamName.replace(/ /g, "")}.png`;
     const awayTeamLogo = `images/${awayTeamName.replace(/ /g, "")}.png`;
+    console.log("Home Team Logo Path:", homeTeamLogo);
+    console.log("Away Team Logo Path:", awayTeamLogo);
+
     const matchTime = liveGameData.timestr || "Live";
-    const homeScore = liveGameData.hscore || "-";
-    const awayScore = liveGameData.ascore || "-";
+    console.log("Match Time:", matchTime);
+
+    const homeScore =
+      liveGameData.hscore !== undefined ? liveGameData.hscore : "-";
+    const awayScore =
+      liveGameData.ascore !== undefined ? liveGameData.ascore : "-";
+    console.log("Home Score:", homeScore);
+    console.log("Away Score:", awayScore);
 
     const gameCard = document.createElement("div");
     gameCard.className = "game-card live"; // Mark as live
@@ -153,8 +169,12 @@ function renderLiveGame(liveGameData) {
     `;
 
     output.appendChild(gameCard);
+    console.log("Game card appended to output.");
+  } else {
+    console.log("Game card already exists, not rendering again.");
   }
 }
+
 // Function to render completed games
 function renderCompletedGame(game, ladderData) {
   const output = document.getElementById("output");
