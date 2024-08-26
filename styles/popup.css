@@ -35,6 +35,7 @@ h1 {
 #themeSwitcher img {
   width: 24px;
   height: 24px;
+  transition: filter 0.3s ease; /* Add transition for smooth inversion */
 }
 
 #settings {
@@ -47,6 +48,7 @@ h1 {
 #settings img {
   width: 24px;
   height: 24px;
+  transition: filter 0.3s ease; /* Add transition for smooth inversion */
 }
 
 #roundSelector {
@@ -211,6 +213,12 @@ h1 {
   --dropdown-border: #555555;
   --card-background: #333333;
   --card-border: #444444;
+}
+
+/* Invert icons in dark mode */
+[data-theme="dark"] #themeSwitcher img,
+[data-theme="dark"] #settings img {
+  filter: invert(1);
 }
 
 /* Styling for settings dropdown */

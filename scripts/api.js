@@ -227,6 +227,34 @@ function setupSSEForGame(gameId, onEventCallback) {
   return eventSource;
 }
 
+// Setup SSE for the fake game
+function setupFakeSSE(onEventCallback) {
+  console.log("Setting up SSE connection for fake live game...");
+  const eventSource = new EventSource("https://api.squiggle.com.au/sse/test");
+
+  eventSource.addEventListener("score", (event) => {
+    const parsedData = JSON.parse(event.data);
+    console.log("Fake live game SSE data received:", parsedData);
+    onEventCallback(parsedData);
+  });
+
+  eventSource.onerror = (error) => {
+    console.error("SSE error for fake live game:", error);
+    eventSource.close();
+  };
+
+  return eventSource;
+}
+
+// Close SSE connection for fake game
+function closeFakeSSE() {
+  if (window.fakeGameEventSource) {
+    console.log("Closing SSE connection for fake live game...");
+    window.fakeGameEventSource.close();
+    window.fakeGameEventSource = null;
+  }
+}
+
 export {
   getCurrentRound,
   fetchLadderData,
@@ -238,4 +266,6 @@ export {
   setupSSEForGame,
   getCachedData,
   cacheData,
+  setupFakeSSE,
+  closeFakeSSE,
 };

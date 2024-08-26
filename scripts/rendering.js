@@ -1,4 +1,6 @@
 // Function to get team name from ID (used only for SSE live games)
+import { setupFakeSSE, closeFakeSSE } from "./api.js";
+
 function getTeamName(teamId) {
   const teamMapping = {
     1: "Adelaide",
@@ -74,7 +76,13 @@ export function renderLadder(ladderData) {
 }
 
 // Function to render games (entry point)
-export function renderGames(gamesData, ladderData, round, liveGames = []) {
+export function renderGames(
+  gamesData,
+  ladderData,
+  round,
+  liveGames = [],
+  isFakeLiveGameEnabled = false
+) {
   const output = document.getElementById("output");
   output.innerHTML = "";
 
@@ -107,6 +115,14 @@ export function renderGames(gamesData, ladderData, round, liveGames = []) {
       renderLiveGame(liveGame);
     }
   });
+
+  // Check if fake live game setting is enabled
+  if (isFakeLiveGameEnabled) {
+    renderFakeGame();
+    setupFakeSSE(updateFakeGamePanel); // Set up SSE connection for fake game
+  } else {
+    closeFakeSSE(); // Close SSE connection if the setting is off
+  }
 }
 
 function renderLiveGame(liveGameData) {
@@ -288,6 +304,76 @@ export function updateLiveGamePanel(gameId, eventData, eventType) {
     const banner = gameCard.querySelector(".banner");
     if (banner) banner.textContent = eventData.timestr;
   }
+}
+
+// Function to render a fake live game
+function renderFakeGame() {
+  const output = document.getElementById("output");
+
+  // Fake game data
+  const homeTeamName = "West Coast";
+  const awayTeamName = "Essendon";
+  const homeTeamLogo = `images/${homeTeamName.replace(/ /g, "")}.png`;
+  const awayTeamLogo = `images/${awayTeamName.replace(/ /g, "")}.png`;
+  const matchTime = "Q2 15:23"; // Fake live match time
+  const venue = "Optus Stadium";
+  const homeScore = 45; // Fake score
+  const awayScore = 32; // Fake score
+
+  // Create a date element for consistency with other games
+  const dateElement = document.createElement("div");
+  dateElement.className = "game-date";
+  dateElement.textContent = "Monday, August 26"; // Fake date
+
+  const gameCard = document.createElement("div");
+  gameCard.className = "game-card live"; // Mark as live
+  gameCard.id = `fake-live-game`; // Assign a unique ID for the fake game
+
+  gameCard.innerHTML = `
+    <div class="team-container home">
+      <div class="team">
+        <span class="team-name">${homeTeamName}</span>
+        <img src="${homeTeamLogo}" alt="${homeTeamName}" class="team-logo">
+      </div>
+      <div class="score">${homeScore}</div>
+    </div>
+    <div class="live-banner-container">
+      <div class="banner">${matchTime}</div>
+      <div class="sse-venue">${venue}</div>
+    </div>
+    <div class="team-container away">
+      <div class="score">${awayScore}</div>
+      <div class="team">
+        <img src="${awayTeamLogo}" alt="${awayTeamName}" class="team-logo">
+        <span class="team-name">${awayTeamName}</span>
+      </div>
+    </div>
+  `;
+
+  output.appendChild(dateElement);
+  output.appendChild(gameCard);
+  console.log("Fake game card appended to output.");
+}
+
+// Function to update the fake game panel with SSE data
+function updateFakeGamePanel(eventData) {
+  const fakeGameCard = document.getElementById("fake-live-game");
+
+  if (!fakeGameCard) {
+    console.error("Fake live game card not found!");
+    return;
+  }
+
+  const homeScoreElement = fakeGameCard.querySelector(".home .score");
+  const awayScoreElement = fakeGameCard.querySelector(".away .score");
+
+  if (homeScoreElement && awayScoreElement) {
+    homeScoreElement.textContent = eventData.score.hscore;
+    awayScoreElement.textContent = eventData.score.ascore;
+  }
+
+  const banner = fakeGameCard.querySelector(".banner");
+  if (banner) banner.textContent = eventData.timestr;
 }
 
 function formatDate(dateString) {
