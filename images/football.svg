@@ -1,0 +1,27 @@
+<svg
+    width="200"
+    height="100"
+    viewBox="0 0 200 100"
+    xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+>
+    <!-- Main football body -->
+    <ellipse
+        cx="100"
+        cy="50"
+        rx="90"
+        ry="40"
+        fill="#D32F2F"
+    />
+    <!-- Highlight -->
+    <path
+        d="M10,45 Q100,15 190,45 Q100,75 10,45"
+        fill="rgba(255, 255, 255, 0.2)"
+    />
+    <!-- Shadow -->
+    <path
+        d="M10,55 Q100,85 190,55 Q100,45 10,55"
+        fill="rgba(0, 0, 0, 0.1)"
+    />
+
+</svg>
