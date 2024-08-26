@@ -1,29 +1,24 @@
 {
-    "manifest_version": 3,
-    "name": "AFL Quick View",
-    "version": "1.0",
-    "description": "A chrome extension to quickly view AFL information such as matches, fixtures, and the ladder.",
-    "icons": {
-      "16": "images/16.png",
-      "48": "images/48.png",
-      "128": "images/128.png"
-    },
-    "permissions": [
-      "activeTab",
-      "scripting",
-      "storage",
-      "webRequest",
-      "webRequestBlocking"
-    ],
-    "host_permissions": [
-      "https://api.squiggle.com.au/*",
-      "https://aflapi.afl.com.au/*"
-    ],
-    "background": {
-      "service_worker": "background.js"
-    },
-    "action": {
-      "default_popup": "popup.html"
-    }
+  "manifest_version": 3,
+  "name": "AFL Quick View",
+  "version": "1.0",
+  "description": "A Chrome extension to quickly view AFL information such as matches, fixtures, and the ladder.",
+  "icons": {
+    "16": "images/16.png",
+    "48": "images/48.png",
+    "128": "images/128.png"
+  },
+  "permissions": [
+    "storage" 
+  ],
+  "host_permissions": [
+    "https://api.squiggle.com.au/*",  
+    "https://aflapi.afl.com.au/*" 
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
   }
-  
+}
